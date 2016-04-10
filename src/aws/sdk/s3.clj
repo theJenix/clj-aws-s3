@@ -464,7 +464,18 @@
   ([cred bucket src-key dest-key]
      (copy-object cred bucket src-key bucket dest-key))
   ([cred src-bucket src-key dest-bucket dest-key]
-     (to-map (.copyObject (s3-client cred) src-bucket src-key dest-bucket dest-key))))
+     (to-map (.copyObject (s3-client cred) src-bucket src-key dest-bucket dest-key)))
+  ([cred src-bucket src-key dest-bucket dest-key {:keys [matching-etags nonmatching-etags modified-since unmodified-since] :as opts}]
+     (let [req (CopyObjectRequest.)]
+       (when matching-etags
+         (.setMatchingETagConstraints req matching-etags))
+       (when nonmatching-etags
+         (.setNonmatchingETagConstraints req nonmatching-etags))
+       (when modified-since
+         (.setModifiedSinceConstraint req modified-since))
+       (when unmodified-since
+         (.setUnmodifiedSinceConstraint req unmodified-since))
+     (to-map (.copyObject (s3-client cred) req)))))
 
 (defn- map->ListVersionsRequest
   "Create a ListVersionsRequest instance from a map of values."
