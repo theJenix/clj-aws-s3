@@ -23,6 +23,7 @@
            com.amazonaws.services.s3.model.Bucket
            com.amazonaws.services.s3.model.Grant
            com.amazonaws.services.s3.model.CanonicalGrantee
+           com.amazonaws.services.s3.model.CopyObjectRequest
            com.amazonaws.services.s3.model.CopyObjectResult
            com.amazonaws.services.s3.model.EmailAddressGrantee
            com.amazonaws.services.s3.model.GetObjectRequest
@@ -36,6 +37,7 @@
            com.amazonaws.services.s3.model.ObjectListing
            com.amazonaws.services.s3.model.Permission
            com.amazonaws.services.s3.model.PutObjectRequest
+           com.amazonaws.services.s3.model.PutObjectResult
            com.amazonaws.services.s3.model.S3Object
            com.amazonaws.services.s3.model.S3ObjectSummary
            com.amazonaws.services.s3.model.S3VersionSummary
@@ -222,7 +224,7 @@
                  (->PutObjectRequest bucket key))]
     (when permissions
       (.setAccessControlList req (create-acl permissions)))
-    (.putObject (s3-client cred) req)))
+    (to-map (.putObject (s3-client cred) req))))
 
 (defn- initiate-multipart-upload
   [cred bucket key] 
@@ -351,7 +353,15 @@
      :expiration-time         (.getExpirationTime result)
      :expiration-time-rule-id (.getExpirationTimeRuleId result)
      :last-modified-date      (.getLastModifiedDate result)
-     :server-side-encryption  (.getServerSideEncryption result)}))
+     :server-side-encryption  (.getServerSideEncryption result)})
+  PutObjectResult
+  (to-map [result]
+    {:versionId               (.getVersionId result)
+     :etag                    (.getETag result)
+     :server-side-encryption  (.getServerSideEncryption result)
+     :expiration-time         (.getExpirationTime result)
+     :expiration-time-rule-id (.getExpirationTimeRuleId result)
+     :content-md5             (.getContentMd5 result)}))
 
 (defn get-object
   "Get an object from an S3 bucket. The object is returned as a map with the
@@ -474,7 +484,7 @@
   ([cred src-bucket src-key dest-bucket dest-key]
      (to-map (.copyObject (s3-client cred) src-bucket src-key dest-bucket dest-key)))
   ([cred src-bucket src-key dest-bucket dest-key {:keys [matching-etags nonmatching-etags modified-since unmodified-since] :as opts}]
-     (let [req (CopyObjectRequest.)]
+     (let [req (CopyObjectRequest. src-bucket src-key dest-bucket dest-key)]
        (when matching-etags
          (.setMatchingETagConstraints req matching-etags))
        (when nonmatching-etags
